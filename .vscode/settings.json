@@ -12,7 +12,10 @@
         "service": "iris",
         "internalPort": 52773
       },
-      "active": true
+      "active": true,
+    "links": {
+        "Error Log": "${serverUrl}/csp/sys/op/UtilSysAppErrorNamespaces.csp"
+      }
     },
     "sqltools.connections": [
       {
