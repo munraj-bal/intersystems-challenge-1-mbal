@@ -1,8 +1,8 @@
 """InterSystems Employee Programming Challenge #1 — Gaia flux variability.
 
-Reads the 20 Gaia DR3 epoch photometry files from data/in/ and computes
-per-source BP/RP flux percentage change, counting sources whose flux
-varied by more than 100%.
+Reads the 20 Gaia DR3 epoch photometry files from data/in/ and writes
+output.csv listing every source whose BP or RP flux varied by more than
+100% across all valid observations.
 """
 
 import csv
@@ -13,15 +13,25 @@ from pathlib import Path
 # Feedback: The 20 files were already provided in the template's data/in
 # directory, which made getting started very smooth.
 DATA_DIR: Path = Path("data/in")
+OUTPUT_CSV: Path = Path("output.csv")
 
 # Column positions in the Gaia epoch photometry ECSV files.
 COL_SOURCE_ID: int = 1
 COL_BP_FLUX: int = 11
 COL_RP_FLUX: int = 16
 
-
 # Minimum percentage change for a source to be included in the output.
 THRESHOLD: float = 100.0
+
+# Output column names required by the challenge specification.
+OUTPUT_HEADER: list[str] = [
+    "source_id",
+    "bp_min_flux",
+    "bp_max_flux",
+    "rp_min_flux",
+    "rp_max_flux",
+    "percentage_change",
+]
 
 
 def scan_flux_array(cell: str):
@@ -97,8 +107,11 @@ def skip_metadata_lines(handle):
 
 
 def process_file(path: Path):
-    """Return the count of sources whose BP or RP flux varied by more than 100%."""
-    qualifying_sources = 0
+    """Return a list of qualifying-source rows from a Gaia ECSV file.
+
+    Each returned row is a tuple ordered per OUTPUT_HEADER.
+    """
+    results = []
 
     with gzip.open(path, mode="rt", encoding="utf-8", newline="") as handle:
         # Feed only the non-metadata lines into the CSV parser.
@@ -118,22 +131,38 @@ def process_file(path: Path):
             best_pct = max(bp_pct, rp_pct)
 
             if best_pct > THRESHOLD:
-                qualifying_sources += 1
+                results.append((
+                    row[COL_SOURCE_ID],
+                    bp_min,
+                    bp_max,
+                    rp_min,
+                    rp_max,
+                    best_pct,
+                ))
 
-    return qualifying_sources
+    return results
+
+
+def write_output(rows, path: Path):
+    """Write rows to a CSV file with the challenge-required header."""
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(OUTPUT_HEADER)
+        writer.writerows(rows)
 
 
 def main():
     files = sorted(DATA_DIR.glob("EpochPhotometry_*.csv.gz"))
     print(f"Found {len(files)} data files")
 
-    total = 0
+    all_results = []
     for path in files:
-        qualifying = process_file(path)
-        print(f"  {path.name}: {qualifying} sources with >100% variability")
-        total += qualifying
+        all_results.extend(process_file(path))
 
-    print(f"Sources with >100% variability: {total}")
+    write_output(all_results, OUTPUT_CSV)
+
+    print(f"Sources with >100% variability: {len(all_results)}")
+    print(f"Output written to {OUTPUT_CSV}")
 
 
 if __name__ == "__main__":
