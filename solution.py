@@ -7,6 +7,7 @@ output.csv listing every source whose BP or RP flux varied by more than
 
 import csv
 import gzip
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 
@@ -156,8 +157,10 @@ def main():
     print(f"Found {len(files)} data files")
 
     all_results = []
-    for path in files:
-        all_results.extend(process_file(path))
+    # Feedback: Parallelising per-file was the biggest speed win.
+    with ProcessPoolExecutor() as pool:
+        for file_results in pool.map(process_file, files):
+            all_results.extend(file_results)
 
     write_output(all_results, OUTPUT_CSV)
 
