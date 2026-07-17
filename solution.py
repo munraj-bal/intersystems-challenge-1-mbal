@@ -1,7 +1,8 @@
 """InterSystems Employee Programming Challenge #1 — Gaia flux variability.
 
-Reads the 20 Gaia DR3 epoch photometry files from data/in/ and parses
-BP/RP flux arrays into per-source min/max values.
+Reads the 20 Gaia DR3 epoch photometry files from data/in/ and computes
+per-source BP/RP flux percentage change, counting sources whose flux
+varied by more than 100%.
 """
 
 import csv
@@ -17,6 +18,10 @@ DATA_DIR: Path = Path("data/in")
 COL_SOURCE_ID: int = 1
 COL_BP_FLUX: int = 11
 COL_RP_FLUX: int = 16
+
+
+# Minimum percentage change for a source to be included in the output.
+THRESHOLD: float = 100.0
 
 
 def scan_flux_array(cell: str):
@@ -55,9 +60,9 @@ def scan_flux_array(cell: str):
         except ValueError:
             continue
 
-        # Skip NaN if float() produced one, and skip
-        # non-positive fluxes (the percentage-change formula divides by
-        # the minimum, so zero or negative would be invalid).
+        # Skip NaN if float() produced one, and skip non-positive fluxes
+        # (the percentage-change formula divides by the minimum, so zero
+        # or negative would be invalid).
         is_nan = value != value
         if is_nan or value <= 0.0:
             continue
@@ -73,6 +78,17 @@ def scan_flux_array(cell: str):
     return minimum, maximum
 
 
+def percentage_change(min_flux, max_flux):
+    """Return ((max - min) / min) * 100, or 0.0 if inputs are invalid.
+
+    Returning 0.0 for invalid inputs lets callers compare against the
+    threshold without extra None-checks.
+    """
+    if min_flux is None or max_flux is None or min_flux <= 0.0:
+        return 0.0
+    return (max_flux - min_flux) / min_flux * 100.0
+
+
 def skip_metadata_lines(handle):
     """Yield lines from the file that are not ECSV metadata."""
     for line in handle:
@@ -81,8 +97,8 @@ def skip_metadata_lines(handle):
 
 
 def process_file(path: Path):
-    """Return the number of data rows in a Gaia ECSV file."""
-    row_count = 0
+    """Return the count of sources whose BP or RP flux varied by more than 100%."""
+    qualifying_sources = 0
 
     with gzip.open(path, mode="rt", encoding="utf-8", newline="") as handle:
         # Feed only the non-metadata lines into the CSV parser.
@@ -92,21 +108,19 @@ def process_file(path: Path):
         # Skip the column-names header row.
         next(reader)
 
-        # Grab the first data row separately to print a sample of it.
-        first_row = next(reader, None)
-        if first_row is not None:
-            source_id = first_row[COL_SOURCE_ID]
-            bp_min, bp_max = scan_flux_array(first_row[COL_BP_FLUX])
-            rp_min, rp_max = scan_flux_array(first_row[COL_RP_FLUX])
-            print(f"    first source {source_id}, "
-                f"bp=[{bp_min}, {bp_max}], rp=[{rp_min}, {rp_max}]")
-            row_count = 1
+        for row in reader:
+            bp_min, bp_max = scan_flux_array(row[COL_BP_FLUX])
+            rp_min, rp_max = scan_flux_array(row[COL_RP_FLUX])
 
-        # Count the remaining data rows.
-        for _ in reader:
-            row_count += 1
+            # Take the larger of the two bands' percentage changes.
+            bp_pct = percentage_change(bp_min, bp_max)
+            rp_pct = percentage_change(rp_min, rp_max)
+            best_pct = max(bp_pct, rp_pct)
 
-    return row_count
+            if best_pct > THRESHOLD:
+                qualifying_sources += 1
+
+    return qualifying_sources
 
 
 def main():
@@ -115,11 +129,11 @@ def main():
 
     total = 0
     for path in files:
-        rows = process_file(path)
-        print(f"  {path.name}: {rows} rows")
-        total += rows
+        qualifying = process_file(path)
+        print(f"  {path.name}: {qualifying} sources with >100% variability")
+        total += qualifying
 
-    print(f"Total sources: {total}")
+    print(f"Sources with >100% variability: {total}")
 
 
 if __name__ == "__main__":
