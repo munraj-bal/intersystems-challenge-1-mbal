@@ -5,6 +5,11 @@ output.csv listing every source whose BP or RP flux varied by more than
 100% across all valid observations.
 """
 
+
+__author__ = "Munraj Bal"
+__email__ = "munraj.bal@intersystems.com"
+
+
 import csv
 import gzip
 from concurrent.futures import ProcessPoolExecutor
