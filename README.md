@@ -19,7 +19,7 @@ For each source in the input:
 ## Prerequisites
 
 - https://git-scm.com/downloads
-- [Docker Desktop](https://www.ts/docker-desktop/
+- [Docker Desktop] https://www.docker.com/products/docker-desktop/
 
 ## Installation
 
