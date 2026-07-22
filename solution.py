@@ -94,17 +94,6 @@ def scan_flux_array(cell: str):
     return minimum, maximum
 
 
-def percentage_change(min_flux, max_flux):
-    """Return ((max - min) / min) * 100, or 0.0 if inputs are invalid.
-
-    Returning 0.0 for invalid inputs lets callers compare against the
-    threshold without extra None-checks.
-    """
-    if min_flux is None or max_flux is None or min_flux <= 0.0:
-        return 0.0
-    return (max_flux - min_flux) / min_flux * 100.0
-
-
 def skip_metadata_lines(handle):
     """Yield lines from the file that are not ECSV metadata."""
     for line in handle:
@@ -131,10 +120,18 @@ def process_file(path: Path):
             bp_min, bp_max = scan_flux_array(row[COL_BP_FLUX])
             rp_min, rp_max = scan_flux_array(row[COL_RP_FLUX])
 
-            # Take the larger of the two bands' percentage changes.
-            bp_pct = percentage_change(bp_min, bp_max)
-            rp_pct = percentage_change(rp_min, rp_max)
-            best_pct = max(bp_pct, rp_pct)
+            # Inline percentage_change to avoid two function calls per row.
+            if bp_min is not None and bp_min > 0.0:
+                bp_pct = (bp_max - bp_min) / bp_min * 100.0
+            else:
+                bp_pct = 0.0
+
+            if rp_min is not None and rp_min > 0.0:
+                rp_pct = (rp_max - rp_min) / rp_min * 100.0
+            else:
+                rp_pct = 0.0
+
+            best_pct = bp_pct if bp_pct > rp_pct else rp_pct
 
             if best_pct > THRESHOLD:
                 results.append((
