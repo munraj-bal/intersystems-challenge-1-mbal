@@ -12,14 +12,14 @@ __email__ = "munraj.bal@intersystems.com"
 
 import csv
 import gzip
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 
 # Feedback: The 20 files were already provided in the template's data/in
 # directory, which made getting started very smooth.
-DATA_DIR: Path = Path("data/in")
-OUTPUT_CSV: Path = Path("output.csv")
+BASE_DIR: Path = Path(__file__).parent
+DATA_DIR: Path = BASE_DIR / "data" / "in"
+OUTPUT_CSV: Path = BASE_DIR / "output.csv"
 
 # Column positions in the Gaia epoch photometry ECSV files.
 COL_SOURCE_ID: int = 1
@@ -162,10 +162,8 @@ def main():
     print(f"Found {len(files)} data files")
 
     all_results = []
-    # Feedback: Parallelising per-file was the biggest speed win.
-    with ProcessPoolExecutor() as pool:
-        for file_results in pool.map(process_file, files):
-            all_results.extend(file_results)
+    for path in files:
+        all_results.extend(process_file(path))
 
     write_output(all_results, OUTPUT_CSV)
 
