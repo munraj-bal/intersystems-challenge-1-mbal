@@ -2,15 +2,11 @@ ROUTINE RunScript
  #; We will run this routine to do the benchmark
 Run()
 {
- #; extract files if necessary from .data/in to .data/temp
-
  #; Start time
  Set startTime = $ZHOROLOG
 
- #; Insert the call to your method/rountine that
- #; - reads the csv files from ./data/in or .data/temp
- #; - processes data
- #; - creates output file in .data/out
+ #; Run the Gaia flux variability analysis
+ Do ##class(dc.challenge.Solution).Run()
 
  #; End time
  Set endTime = $ZHOROLOG
