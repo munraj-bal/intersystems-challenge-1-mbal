@@ -21,3 +21,10 @@ data/temp/EpochPhotometry_020494-020747.csv
 data/temp/EpochPhotometry_020748-020984.csv
 data/temp/EpochPhotometry_020985-021233.csv
 iris-main.log
+
+# Python cache
+__pycache__/
+*.pyc
+
+# VS Code personal settings (optional — remove if you want to commit)
+.vscode/
